@@ -80,49 +80,65 @@ if(balance<amount){
     })
 }
 
-
-
+let transaction
+try{
 //5.Create transaction(PENDING)
 const session=await mongoose.startSession()
 session.startTransaction()
 
-const transaction=new transactionModel.create({
+ transaction=[await transactionModel.create([{
     fromAccount,
     toAccount,
     amount,
     idempotencyKey,
     status:"PENDING"
-},{session})
+}],{session})][0]
 
 
 //6.Create debit ledger entry
-const debitLedgerEntry=new ledgerModel.create({
-    account:fromAccount,
-    amount:amount,
-    transaction:transaction._id,
-    type:"DEBIT"
-},{session})
+const debitLedgerEntry = await ledgerModel.create([{
+    account: fromAccount,
+    amount,
+    transaction: transaction._id,
+    type: "DEBIT"
+}], { session });
 
+// await (()=>{
+//     return new Promise((resolve)=> setTimeout(resolve,100*1000))
+// })()
 
 //7.Create credit ledger entry
-const creditLedgerEntry=new ledgerModel.create({
-    account:toAccount,
-    amount:amount,
-    transaction:transaction._id,
-    type:"CREDIT"
-},{session})
+const creditLedgerEntry = await ledgerModel.create([{
+    account: toAccount,
+    amount,
+    transaction: transaction._id,
+    type: "CREDIT"
+}], { session });
 
 
 //8.Transaction completed
-transaction.status="COMPLETED"
+await transactionModel.findOneAndUpdate(
+    {_id:transaction._id},
+    {status:"COMPLETED"},
+    {session}
+)
 
 //9.commit mongo-db session
-await transaction.save({session})
+await session.commitTransaction();
+session.endSession();
 
-
+}catch(err){
+    return res.status(400).json({
+        message:"Transaction failed due to some error, please retry after some time."
+    })
+}
 //10.send email notification
-await emailService.sendTransactionEmail(req.user.email,req.user.name, req.user.amount,req.user.toAccount)
-
+await emailService.sendTransactionEmail(
+    req.user.email,
+    req.user.name,
+    amount,
+    toAccount
+);
 
 return res.status(201).json({
     message:"Transaction completed successfully "
