@@ -103,9 +103,9 @@ const debitLedgerEntry = await ledgerModel.create([{
     type: "DEBIT"
 }], { session });
 
-// await (()=>{
-//     return new Promise((resolve)=> setTimeout(resolve,100*1000))
-// })()
+await (()=>{
+    return new Promise((resolve)=> setTimeout(resolve,100*1000))
+})()
 
 //7.Create credit ledger entry
 const creditLedgerEntry = await ledgerModel.create([{
@@ -141,7 +141,8 @@ await emailService.sendTransactionEmail(
 );
 
 return res.status(201).json({
-    message:"Transaction completed successfully "
+    message:"Transaction completed successfully ",
+    transaction:transaction
 })
 }
 
