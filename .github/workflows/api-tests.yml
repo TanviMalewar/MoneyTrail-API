@@ -1,0 +1,49 @@
+name: API tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Start the app and MongoDB (Docker Compose)
+        run: docker compose up -d --build --wait
+
+      - name: Seed the system user
+        run: docker compose exec -T app node scripts/seed-system-user.js
+
+      - name: Install Node (to run Newman)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run the Postman collection with Newman
+        run: >
+          npx --yes newman@6 run postman/MoneyTrail.postman_collection.json
+          -e postman/MoneyTrail-local.postman_environment.json
+          --reporters cli,junit
+          --reporter-junit-export newman-results.xml
+
+      - name: Save the test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-results
+          path: newman-results.xml
+
+      - name: Show app logs (only if something failed)
+        if: failure()
+        run: docker compose logs app
+
+      - name: Tear everything down
+        if: always()
+        run: docker compose down -v
