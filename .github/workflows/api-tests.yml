@@ -28,7 +28,7 @@ jobs:
 
       - name: Run the Postman collection with Newman
         run: >
-          npx --yes newman@6 run postman/MoneyTrail-green.postman_collection.json
+          npx --yes newman@6 run postman/MoneyTrail.postman_collection.json
           -e postman/MoneyTrail-local.postman_environment.json
           --reporters cli,junit
           --reporter-junit-export newman-results.xml

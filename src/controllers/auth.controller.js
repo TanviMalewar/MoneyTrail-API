@@ -8,7 +8,14 @@ async function userRegisterController(req, res) {
 
     try {
 
-        const { email, password, name } = req.body;
+        const { email, password, name } = req.body || {};
+
+        if (typeof email !== "string" || typeof password !== "string" || typeof name !== "string") {
+            return res.status(400).json({
+                message: "name, email and password are required and must be strings"
+            });
+        }
+
         const isExists = await userModel.findOne({ email });
 
         if (isExists) {
@@ -39,6 +46,18 @@ async function userRegisterController(req, res) {
             token
         });
     } catch (err) {
+        // Schema validation failed (bad email, missing name, short password...) -> client's fault
+        if (err.name === "ValidationError") {
+            return res.status(400).json({
+                message: Object.values(err.errors).map((e) => e.message).join(", ")
+            });
+        }
+        // Two requests registered the same email at the same moment
+        if (err.code === 11000) {
+            return res.status(422).json({
+                message: "User already exists"
+            });
+        }
         console.error(err);
         return res.status(500).json({
             error: err.message
@@ -48,7 +67,14 @@ async function userRegisterController(req, res) {
 
 
 async function userLoginController(req,res) {
-    const{email,password}=req.body
+    const { email, password } = req.body || {}
+
+    if (typeof email !== "string" || typeof password !== "string") {
+        return res.status(400).json({
+            message: "email and password are required and must be strings"
+        })
+    }
+
     const user=await userModel.findOne({email}).select("+password")
 
     if(!user){
@@ -93,9 +119,14 @@ async function userLogoutController(req,res) {
 
     
 
-    await tokenBlackListModel.create({
-        token:token
-    })
+    try {
+        await tokenBlackListModel.create({
+            token:token
+        })
+    } catch (err) {
+        // 11000 = duplicate key = this token is already blacklisted, which is exactly what we want
+        if (err.code !== 11000) throw err
+    }
     res.clearCookie("token")
 
     return res.status(200).json({

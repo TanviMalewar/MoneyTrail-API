@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "npx nodemon server.js",
     "seed": "node scripts/seed-system-user.js",
-    "test:api": "npx --yes newman@6 run postman/MoneyTrail-green.postman_collection.json -e postman/MoneyTrail-local.postman_environment.json",
+    "test:api": "npx --yes newman@6 run postman/MoneyTrail.postman_collection.json -e postman/MoneyTrail-local.postman_environment.json",
     "test": "npm run test:api"
   },
   "keywords": [],
