@@ -1,5 +1,5 @@
 const mongoose=require('mongoose')
-const { findOneAndUpdate } = require('./account.model')
+//const { findOneAndUpdate } = require('./account.model')
 
 const ledgerSchema=new mongoose.Schema({
     account:{
@@ -38,7 +38,7 @@ function preventLedgerModification(){
 }
 
 
-ledgerSchema.pre('findOneAndUpdate',preventLedgerModification)
+//ledgerSchema.pre('findOneAndUpdate',preventLedgerModification)
 ledgerSchema.pre('updateOne',preventLedgerModification)
 ledgerSchema.pre('deleteOne',preventLedgerModification)
 ledgerSchema.pre('remove',preventLedgerModification)
