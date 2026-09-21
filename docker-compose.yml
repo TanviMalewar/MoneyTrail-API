@@ -1,0 +1,34 @@
+# One command starts the whole stack:  docker compose up --build
+# Everything here is a throwaway TEST environment - the database is deleted with:  docker compose down -v
+services:
+  mongo:
+    image: mongo:7
+    # Your code uses MongoDB transactions, which only work on a replica set.
+    # A single-node replica set is enough.
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      # Initialises the replica set the first time, then reports healthy once it is up
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]}).ok }\""]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 5s
+
+  app:
+    build: .
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      # "mongo" is the service name above; Docker resolves it automatically
+      MONGO_URI: mongodb://mongo:27017/moneytrail_test?replicaSet=rs0
+      JWT_SECRET: test-only-secret-never-use-in-production
+      EMAIL_DISABLED: "true"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s

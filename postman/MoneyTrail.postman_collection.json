@@ -105,7 +105,6 @@
                   "pm.environment.set('runId', run);",
                   "pm.environment.set('aliceEmail', `alice_${run}@test.com`);",
                   "pm.environment.set('bobEmail', `bob_${run}@test.com`);",
-                  "pm.environment.set('systemEmail', `system_${run}@test.com`);",
                   "pm.environment.set('password', 'Test@1234');"
                 ]
               }
@@ -183,61 +182,7 @@
           ]
         },
         {
-          "name": "1.3 Register - System user (needs DB flip afterwards)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "register"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"System\",\n  \"email\": \"{{systemEmail}}\",\n  \"password\": \"{{password}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "The API has no way to create a system user (systemUser is immutable and not accepted by /register). After this request, run the mongosh command from the guide, THEN continue."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
-                  "const j = pm.response.json();",
-                  "pm.test(\"Returns user (_id, email, name) and a token\", () => {",
-                  "  pm.expect(j.user).to.have.property('_id');",
-                  "  pm.expect(j.user.email).to.eql(pm.environment.get('systemEmail').toLowerCase());",
-                  "  pm.expect(j.token).to.be.a('string').and.not.empty;",
-                  "});",
-                  "pm.test(\"Password is NOT leaked in response\", () => pm.expect(JSON.stringify(j)).to.not.include(\"password\"));",
-                  "pm.environment.set('systemId', j.user._id);",
-                  "pm.environment.set('systemToken', j.token);",
-                  "console.log('>>> Now flip this user to systemUser in MongoDB: ' + pm.environment.get('systemEmail'));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "1.4 Register - duplicate email",
+          "name": "1.3 Register - duplicate email",
           "request": {
             "method": "POST",
             "header": [
@@ -281,7 +226,7 @@
           ]
         },
         {
-          "name": "[BUG?] 1.5 Register - invalid email",
+          "name": "[BUG?] 1.4 Register - invalid email",
           "request": {
             "method": "POST",
             "header": [
@@ -325,7 +270,7 @@
           ]
         },
         {
-          "name": "[BUG?] 1.6 Register - missing name",
+          "name": "[BUG?] 1.5 Register - missing name",
           "request": {
             "method": "POST",
             "header": [
@@ -369,7 +314,7 @@
           ]
         },
         {
-          "name": "[BUG?] 1.7 Register - password too short",
+          "name": "[BUG?] 1.6 Register - password too short",
           "request": {
             "method": "POST",
             "header": [
@@ -413,7 +358,7 @@
           ]
         },
         {
-          "name": "1.8 Login - Alice",
+          "name": "1.7 Login - Alice",
           "request": {
             "method": "POST",
             "header": [
@@ -460,7 +405,7 @@
           ]
         },
         {
-          "name": "1.9 Login - Bob",
+          "name": "1.8 Login - Bob",
           "request": {
             "method": "POST",
             "header": [
@@ -504,7 +449,7 @@
           ]
         },
         {
-          "name": "1.10 Login - System user",
+          "name": "1.9 Login - System user",
           "request": {
             "method": "POST",
             "header": [
@@ -526,13 +471,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{systemEmail}}\",\n  \"password\": \"{{password}}\"\n}",
+              "raw": "{\n  \"email\": \"{{systemEmail}}\",\n  \"password\": \"{{systemPassword}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "description": "The system user is created by the seed script (npm run seed / docker compose exec ... seed), not by the API."
           },
           "event": [
             {
@@ -541,14 +487,16 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.environment.set('systemToken', pm.response.json().token);"
+                  "const j = pm.response.json();",
+                  "pm.environment.set('systemToken', j.token);",
+                  "pm.environment.set('systemId', j.user._id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "1.11 Login - wrong password",
+          "name": "1.10 Login - wrong password",
           "request": {
             "method": "POST",
             "header": [
@@ -591,7 +539,7 @@
           ]
         },
         {
-          "name": "1.12 Login - unknown email",
+          "name": "1.11 Login - unknown email",
           "request": {
             "method": "POST",
             "header": [
@@ -634,7 +582,7 @@
           ]
         },
         {
-          "name": "[BUG?] 1.13 Login - missing password",
+          "name": "[BUG?] 1.12 Login - missing password",
           "request": {
             "method": "POST",
             "header": [
@@ -1365,7 +1313,7 @@
                 }
               ]
             },
-            "description": "FAILS with 403 if you have not run the mongosh systemUser flip yet."
+            "description": "Fails at login (request 1.9) or here with 403 if the seed script has not been run."
           },
           "event": [
             {
